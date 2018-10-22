@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 
-if [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
-	ARG1="-e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
-fi
+declare -a vars=(
+  "AWS_ACCESS_KEY_ID"
+  "AWS_SECRET_ACCESS_KEY"
+  "AWS_SESSION_TOKEN"
+  "AWS_DEFAULT_REGION"
+  "AWS_DEFAULT_OUTPUT"
+)
 
-if [[ -n "$AWS_SECRET_ACCESS_KEY" ]]; then
-	ARG2="-e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
-fi
+ENVVAR=""
+for var in "${vars[@]}"
+do
+  if [[ -n "${!var}" ]]; then
+    ENVVAR="$ENVVAR -e $var=${!var}"
+  fi
+done
 
-docker run -it --rm $ARG1 $ARG2 -v "`pwd`":/project -v "$HOME/.aws":/root/.aws -w /project mesosphere/aws-cli $@
+docker run -it --rm $ENVVAR -v "`pwd`":/project -v "$HOME/.aws":/root/.aws -w /project mesosphere/aws-cli $@
