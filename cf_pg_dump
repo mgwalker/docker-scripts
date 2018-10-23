@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+# Shortcut alias for the simplest versions of cf and jq commands
+cf="docker run --rm -v $HOME/.cf:/root/.cf governmentpaas/cf-cli cf"
+jq="docker run -i --rm realguess/jq jq"
+
+APP=$1
+if [ -z $APP ]; then
+  >&2 echo "Usage: $0 <app name>"
+  exit 1
+fi
+
+>&2 echo "Getting GUID for $APP..."
+# Have to use app GUID in API calls, so get that first
+GUID=`$cf app $APP --guid`
+
+>&2 echo "Getting database credentials for $APP..."
+# Get environment and parse it for first database credentials
+CREDENTIALS=$($cf curl "/v2/apps/$GUID/env" | $jq -c '.system_env_json.VCAP_SERVICES["aws-rds"][0].credentials')
+DB_HOST=$(echo $CREDENTIALS | $jq -r '.host')
+DB_PORT=$(echo $CREDENTIALS | $jq -r '.port')
+USERNAME=$(echo $CREDENTIALS | $jq -r '.username')
+PASSWORD=$(echo $CREDENTIALS | $jq -r '.password')
+DBNAME=$(echo $CREDENTIALS | $jq -r '.db_name')
+
+# Create a local network that our cf-ssh and postgres containers can hook up to
+NETWORK="$(cat /dev/urandom | env LC_CTYPE=C tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)-net"
+docker network create $NETWORK > /dev/null
+
+>&2 echo "Setting up SSH tunnel to CloudFoundry PostgreSQL..."
+CONTAINERID=$(docker run -d --rm --network $NETWORK --name cfssh -v $HOME/.cf:/root/.cf governmentpaas/cf-cli cf ssh $APP -N -L cfssh:5432:$DB_HOST:$DB_PORT)
+
+# When the script finishes, stop the container and remove the network
+trap "echo Closing CloudFoundry SSH tunnel && docker stop $CONTAINERID > /dev/null && docker network rm $NETWORK > /dev/null" EXIT
+
+# Wait until the cf ssh container is responding
+while :
+do
+  docker run --rm --network $NETWORK alpine nc -z cfssh 5432 &> /dev/null
+  if [[ $? -eq 0 ]]; then
+    break
+  fi
+  sleep 1
+done
+
+>&2 echo "SSH tunnel is ready"
+>&2 echo "Dumping database..."
+
+# Yay dump the database
+docker run -it --network $NETWORK postgres pg_dump --dbname=postgresql://$USERNAME:$PASSWORD@cfssh/$DBNAME -O

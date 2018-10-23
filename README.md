@@ -10,3 +10,13 @@ Docker scripts
 - **cf** - CloudFoundry CLI. Hooks up `~/.cf` in the container to bring your
   credentials along, or you can `cf login` to create/set them. Does most of
   the basic stuff, but does not support any Docker networking configuration.
+
+- **cf_pg_dump** - Runs a `pg_dump` on the first database instance hooked up
+  to a given app. Run with `cf_pg_dump <app name>`. Assumes you're already
+  logged in and targeting the right org and space. Also assumes that there's
+  at least one database, and that the first one is PostgreSQL. 😬 Outputs
+  some status info to `stderr`, and the actual SQL dump to `stdout`.
+
+  ```shell
+  cf_pg_dump my-app > dump.sql
+  ```
