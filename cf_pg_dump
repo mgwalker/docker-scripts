@@ -31,7 +31,7 @@ docker network create $NETWORK > /dev/null
 CONTAINERID=$(docker run -d --rm --network $NETWORK --name cfssh -v $HOME/.cf:/root/.cf governmentpaas/cf-cli cf ssh $APP -N -L cfssh:5432:$DB_HOST:$DB_PORT)
 
 # When the script finishes, stop the container and remove the network
-trap "echo Closing CloudFoundry SSH tunnel && docker stop $CONTAINERID > /dev/null && docker network rm $NETWORK > /dev/null" EXIT
+trap ">&2 echo Closing CloudFoundry SSH tunnel && docker stop $CONTAINERID > /dev/null && docker network rm $NETWORK > /dev/null" EXIT
 
 # Wait until the cf ssh container is responding
 while :
