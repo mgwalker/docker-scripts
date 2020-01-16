@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+docker run -it --rm -v "$(pwd)":/working -w /working mgwalker/7z 7z $@
