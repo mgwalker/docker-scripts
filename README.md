@@ -24,3 +24,6 @@ Docker scripts
   ```shell
   cf_pg_dump my-app > dump.sql
   ```
+
+- **ffmpeg** - Runs `ffmpeg`. Injects the current direction into `/work` and
+  sets that as the container's working directory.

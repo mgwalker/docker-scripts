@@ -16,4 +16,4 @@ do
   fi
 done
 
-docker run -it --rm $ENVVAR -v "`pwd`":/project -v "$HOME/.aws":/root/.aws -w /project mikesir87/aws-cli aws $@
+docker run -it --rm $ENVVAR -v "`pwd`":/project -v "$HOME/.aws":/root/.aws -w /project mikesir87/aws-cli aws "$@"
